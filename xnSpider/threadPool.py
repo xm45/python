@@ -5,7 +5,7 @@ import threading
 import time
 #no lock !!!
 class Pool:
-	works = queue.Queue()
+	works = queue.Queue(100000)
 	threads = []
 	def __init__(self, thread_num = 10):
 		self.__init_threads(thread_num)
@@ -15,7 +15,7 @@ class Pool:
 			self.threads.append(Consumer(self.works))
 	def add_job(self, func, *args):
 		self.works.put((func, list(args)))
-	def wait_allcomplete(self, inf = "all complete"):
+	def wait_allcomplete(self, inf = "\nall complete"):
 		while self.works.qsize()!=0:
 			pass#print(self.works.qsize(),flush=True)
 		for item in self.threads:
