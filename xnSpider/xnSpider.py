@@ -79,9 +79,9 @@ class SelfidDiffError(Exception):
 #
 class Spider:
 	#线程池
-	__pool = threadPool.Pool(50)
+	__pool = threadPool.Pool(64)
 	#构造函数
-	def __init__(self,logdir = "lg",prwork = True, prdown = True):
+	def __init__(self,logdir = "lg",prwork = True, prdown = False):
 		self.__session = requests.session()
 		#self.__albumlist = []
 		self.__cnt = 0
@@ -120,11 +120,14 @@ class Spider:
 		self.work_msg(response+'\n')
 	#获取网页内容
 	def getHtml(self, domain, stream = False, timeout = 50):
+		ret = None
 		while True:
 			try:
-				return self.__session.get(domain, stream = stream)
+				ret = self.__session.get(domain, stream = stream)
 			except Exception as e:
 				print(e)
+			if ret:
+				return ret
 	#获取cookies
 	def getcookies(self, domain = r"http://www.renren.com/home"):
 		response = self.getHtml(domain)
@@ -188,9 +191,14 @@ class Spider:
 		else:
 			self.work_msg("\t\t开始下载\t相册\t[%4d]\t<%s>\n"%(metadata['photoCount'],metadata['albumName']))
 		while (pageId-1)*100 < metadata['photoCount']:
-			page = plist%(Uid, Aid, pageId)
-			response = self.getHtml(page)
-			photolist = xnString.getPhotolist(response.text, page, 'getPhotolist')
+			while True:
+				try:
+					page = plist%(Uid, Aid, pageId)
+					response = self.getHtml(page)
+					photolist = xnString.getPhotolist(response.text, page, 'getPhotolist')
+					break
+				except:
+					pass
 			if photolist:
 				for photo in photolist:
 					url = photo['url']
@@ -199,7 +207,7 @@ class Spider:
 					if os.path.exists(filename) and os.path.getsize(filename) != 0:
 						continue
 					else:
-						self.count()
+						self.__count()
 						self.__pool.add_job(self.getPicT, url, filename)
 					#getPic(photo, adir)
 			else:
@@ -299,7 +307,7 @@ class Spider:
 			albumlist = self.getAlbumlist(Uid)
 			for albumId in albumlist:
 				WorkId = self.log.begin(LogId, enum.func.album, Aid = albumId, Uname = Uname)
-				work[WorkId] = album
+				work[WorkId] = albumId
 		elif mode == enum.func.friend:
 			friends = self.getFriends()
 			for f in friends:
@@ -315,7 +323,7 @@ class Spider:
 			dirname = self.getDirName(Uid, Uname, directory)
 			self.work_msg("%s %s\n"%(Uid, Uname))
 			for WorkId in work:
-				albumId = work[workId]
+				albumId = work[WorkId]
 				self.getAlbum(Uid, albumId, dirname)
 				self.wait_allcomplete("\n该相册下载完成\n")
 				self.log.end(LogId, WorkId, enum.func.album)
@@ -347,21 +355,22 @@ class Spider:
 		directory = args['data']['directory']
 		mode = args['func']
 		for attr in enum.need[mode]['input']:
-			if attr not in args:
+			if attr not in args['data']:
 				LackParameterError(attr, args)
 
+		work = {}
 		if args['action'] == enum.action.end:
 			self.log.finish(LogId)
 			return
 		elif args['action'] == enum.action.begin:
 			self.log.restart(LogId)
 			if mode == enum.func.user:
-				Uid = args['Uid']
+				Uid = args['data']['Uid']
 				Uname = self.getNameByUid(Uid)
 				albumlist = self.getAlbumlist(Uid)
 				for albumId in albumlist:
 					WorkId = self.log.begin(LogId, enum.func.album, Aid = albumId, Uname = Uname)
-					work[WorkId] = album
+					work[WorkId] = albumId
 			elif mode == enum.func.friend:
 				friends = self.getFriends()
 				for f in friends:
@@ -373,17 +382,22 @@ class Spider:
 				LackParameterError('selfid',args['data'])
 			if self.selfid != args['data']['selfid']:
 				raise SelfidDiffError(self.selfid, args['data']['selfid'])
+			if 'Uid' in args['data']:
+				Uid = args['data']['Uid']
+				Uname = self.getNameByUid(Uid)
+			if 'Aid' in args['data']:
+				Aid = args['data']['Aid']
 			work = self.log.get(LogId)
 		#准备完成
 		if mode == enum.func.album:
 			dirname = directory + "_相册/"
-			self.getAlbum(args['Uid'], args['Aid'], dirname)
+			self.getAlbum(Uid, Aid, dirname)
 			self.log.finish(LogId)
 		elif mode == enum.func.user:
 			dirname = self.getDirName(Uid, Uname, directory)
 			self.work_msg("%s %s\n"%(Uid, Uname))
 			for WorkId in work:
-				albumId = work[workId]
+				albumId = work[WorkId]['Aid']
 				self.getAlbum(Uid, albumId, dirname)
 				self.wait_allcomplete("\n该相册下载完成\n")
 				self.log.end(LogId, WorkId, enum.func.album)
@@ -474,12 +488,14 @@ class SpiderCmd(Spider):
 		print("总共 %s 张图片  耗时 %s"%(self.count(), end-start))
 	def getByLog(self):
 		while True:
-			print("选择LOG文件")
+			print("选择LOG文件,0退出")
 			for WorkId in self.log.work:
 				line = self.log.work[WorkId]
 				print("\t%s\t\t下载对象:%s\t\t下载阶段:%s\t\t数据:%s"%(line['id'],line['func'],line['action'],line['data']))
 			LogId = input("输入序号:")
 			if not LogId in self.log.fd.extid:
+				if LogId == '0':
+					return
 				print("序号错误")
 			else:
 				break

@@ -176,7 +176,7 @@ def getAlbumlistFromHtml(html, domain, func):
 def __testgetALFH():
 	print(getFuncName(),"():")
 	with open("test/albumlist.html","r",encoding = 'UTF-8') as fd:
-		print(getAlbumlistFromHtml(fd.read()))
+		print(getAlbumlistFromHtml(fd.read(),"",""))
 	print("")
 #
 albumMetadataFormat = r"nx\.data\.photo = \{\"photoList\":(?P<metadata>\{(?:.*\n)*\})\}\;\n"

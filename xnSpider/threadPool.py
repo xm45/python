@@ -11,7 +11,7 @@ class Pool:
 		self.filemutex = threading.Lock()
 		self.__init_threads(thread_num)
 		self.last = -1
-		self.lasttime = 1
+		self.lasttime = 5
 	def __init_threads(self, thread_num):
 		self.mutex = threading.Lock()
 		self.data = {}
@@ -34,17 +34,19 @@ class Pool:
 				#	self.pr()
 			if size != 0:
 				if self.last == -1:
-					time = self.lasttime
+					ti = self.lasttime
 				else:
-					time = (self.last - self.size) / self.lasttime * self.size
-				if time < 0.5:
-					time = 0.5
-				time.sleep(time)
+					ti = (self.last - size) / self.lasttime * size
+				if ti < 0.5:
+					ti = 0.5
+				if ti > 5:
+					ti = 5
+				time.sleep(ti)
 				self.last = size
-				self.lasttime = time
+				self.lasttime = ti
 			else:
 				self.last = -1
-				self.lasttime = 1
+				self.lasttime = 5
 				break
 		"""
 		while self.works.qsize()!=0:
