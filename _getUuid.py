@@ -22,17 +22,11 @@ def u2str(uu):
 	uu = str(uu)
 	ret = uu[0:8]+uu[9:13]+uu[14:18]+uu[19:23]+uu[24:36]
 	return ret
-selfname = __file__
-cwpath = os.getcwd()
-print(cwpath)
-for filename in os.listdir(cwpath):
-	if filename == selfname:
-		continue
+def getNname(filename):
 	if not os.path.isfile(filename):
-		continue
-	if 'pixiv' in filename:
-		#print(filename, filename)
-		continue
+		return None
+	#if 'pixiv' in filename:
+	#	return None
 	suf = getSuffix(filename)
 	imgType = imghdr.what(filename)
 	if imgType:
@@ -40,11 +34,9 @@ for filename in os.listdir(cwpath):
 	if suf == '.jpeg':
 		suf = '.jpg'
 	suf = suf.lower()
-	#print(suf)
 	if not suf in ['.bmp','.jpg','.png','.gif']:
-		continue
-	#print(cwpath,filename)
-	with open(cwpath+'/'+filename,"rb") as fd:
+		return None
+	with open(filename,"rb") as fd:
 		data = base64.b64encode(fd.read())
 	data = str(data, encoding = 'utf-8')
 	uu = uuid.uuid3(uuid.NAMESPACE_DNS, data)
@@ -53,13 +45,26 @@ for filename in os.listdir(cwpath):
 	uuint10 = int(uuint[-10:])
 	uustr = "%010d"%uuint10
 	newname = uustr + suf
-	if newname == filename:
-		print(filename, newname)
-		continue
-	while os.path.exists(newname):
-		newname = '_' + newname
-	if flag:
-		os.rename(filename, newname)
-	#print(filename, newname)
+	return newname
+def dfs(cwpath, tab):
+	print(tab + cwpath)
+	parents = os.listdir(cwpath)
+	for parent in parents:
+		child = os.path.join(cwpath,parent)
+		if os.path.isdir(child):
+			dfs(child, tab + '\t')
+		else:
+			nname = getNname(child)
+			if nname:
+				with open('_uuid.txt', 'a') as fd:
+					fd.write(str(nname) + '\n')
+			print(tab + '\t' + child , 'file' , nname)
+		#print(child)
+selfname = __file__
+cwpath = os.getcwd()
+#print(cwpath, selfname)
+
+dfs(cwpath, "")
+
 import winsound
-winsound.PlaySound('SystemHand', 0)
+#winsound.PlaySound('SystemHand', 0)
