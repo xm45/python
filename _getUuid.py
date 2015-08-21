@@ -50,7 +50,7 @@ def dfs(cwpath, tab):
 	print(tab + cwpath)
 	parents = os.listdir(cwpath)
 	for parent in parents:
-		child = os.path.join(cwpath,parent)
+		child = os.path.join(cwpath, parent)
 		if os.path.isdir(child):
 			dfs(child, tab + '\t')
 		else:
